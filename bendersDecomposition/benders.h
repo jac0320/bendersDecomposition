@@ -18,11 +18,25 @@
 #define INPUT_CHECK
 
 typedef struct{
-	int MAX_ITER;
-	int	MULTICUT;
-	int PROXIMAL;
-	int	MASTER_TYPE;
+	int			SAA;
+	int 		SAA_OBS;
+	long long	SAA_SEED;
+	int 		MAX_ITER;
+	int			MULTICUT;
+	int 		PROXIMAL;
+	int			MASTER_TYPE;
+	long long	RUN_SEED;
 }configType;
+
+/* Omega stores the set of observations. Each observation consists of a vector of realization of random variables with discrete distributions and
+ * the associated probability. */
+typedef struct {
+	int 	cnt;
+	vector	probs;
+	vector	*vals;
+	int     numRV;
+} omegaType;
+
 
 typedef struct {
 	double 	alpha;					/* scalar value for the right-hand side */
@@ -40,6 +54,7 @@ typedef struct{
 typedef struct {
 	oneProblem 	*master;
 	oneProblem 	*subprob;
+	omegaType	*omega;
 	cutsType	*cuts;
 }cellType;
 
@@ -50,9 +65,11 @@ int readConfig(int argc, string probName);
 /* algo.c */
 int algo(oneProblem *orig, stocType *stoc, timeType *tim);
 int setupAlgo(oneProblem *orig, stocType *stoc, timeType *tim, probType ***prob, cellType **cell);
-cellType *newCell(probType **prob);
-oneProblem *newMaster(probType *prob, cutsType *cuts);
+cellType *newCell(probType **prob, stocType *stoc);
+oneProblem *newMaster(probType *prob, cutsType *cuts, omegaType *omega);
 oneProblem *newSubproblem(probType *prob);
+omegaType *newOmega(stocType *stoc);
 void freeCellType(cellType *cell);
+void freeOmegaType(omegaType *omega);
 
 #endif /* BENDERS_H_ */

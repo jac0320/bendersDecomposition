@@ -103,6 +103,12 @@ int readConfig(int argc, string probPath) {
 			fscanf(fptr, "%s", probPath);
 		else if (!(strcmp(line, "OUTPUTDIR")))
 			fscanf(fptr, "%s", outputDir);
+		else if (!(strcmp(line, "SAA")))
+			fscanf(fptr, "%d", &config.SAA);
+		else if (!(strcmp(line, "SAA_OBS")))
+			fscanf(fptr, "%d", &config.SAA_OBS);
+		else if (!(strcmp(line, "SAA_SEED")))
+			fscanf(fptr, "%lf", &config.SAA_SEED);
 		else if (!(strcmp(line, "MULTICUT")))
 			fscanf(fptr, "%d", &config.MULTICUT);
 		else if (!(strcmp(line, "PROXIMAL")))
