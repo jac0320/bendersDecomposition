@@ -11,6 +11,7 @@
 
 long 		MEM_USED = 0;	/* Amount of memory allocated each iteration */
 string   	outputDir;		/* output directory */
+configType	config;			/* configuration structure */
 
 int main(int argc, char *argv[]) {
 	oneProblem 	*orig;
@@ -47,6 +48,15 @@ int main(int argc, char *argv[]) {
 		sprintf(buffer, "rm -r %s*", outputDir);
 		system(buffer);
 	}
+
+	/* launch the algorithm */
+	if (algo(orig, stoc, tim) ) {
+		errMsg("algorithm", "main", "failed to solve the problem using integer-SD", 0);
+		goto TERMINATE;
+	}
+	printf("\n-------------------------------------------------------------------------------------------------------------");
+	printf("\nSuccessfully solved the problem (%s) with stochastic Benders decomposition algorithm. Solution files are written to output directory.\n", orig->name);
+	printf("-------------------------------------------------------------------------------------------------------------");
 
 	/* close solver environment and release all structures */
 	TERMINATE:

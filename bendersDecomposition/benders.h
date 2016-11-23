@@ -15,10 +15,22 @@
 #include "smps.h"
 #include "prob.h"
 
+typedef struct{
+	int MAX_ITER;
+}configType;
+
+typedef struct {
+
+}cellType;
 
 /* benders.c */
 void parseCmdLine(int argc, string *argv, string probName);
 int readConfig(int argc, string probName);
 
+/* setup.c */
+int algo(oneProblem *orig, stocType *stoc, timeType *tim);
+int setupAlgo(oneProblem *orig, stocType *stoc, timeType *tim, probType ***prob, cellType **cell);
+cellType *newCell(probType **prob);
+void freeCellType(cellType *cell);
 
 #endif /* BENDERS_H_ */
