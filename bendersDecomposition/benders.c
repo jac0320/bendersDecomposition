@@ -54,9 +54,9 @@ int main(int argc, char *argv[]) {
 		errMsg("algorithm", "main", "failed to solve the problem using integer-SD", 0);
 		goto TERMINATE;
 	}
-	printf("\n-------------------------------------------------------------------------------------------------------------");
+	printf("\n--------------------------------------------------------------------------------------------------------------------------------------");
 	printf("\nSuccessfully solved the problem (%s) with stochastic Benders decomposition algorithm. Solution files are written to output directory.\n", orig->name);
-	printf("-------------------------------------------------------------------------------------------------------------");
+	printf("--------------------------------------------------------------------------------------------------------------------------------------");
 
 	/* close solver environment and release all structures */
 	TERMINATE:
@@ -103,6 +103,14 @@ int readConfig(int argc, string probPath) {
 			fscanf(fptr, "%s", probPath);
 		else if (!(strcmp(line, "OUTPUTDIR")))
 			fscanf(fptr, "%s", outputDir);
+		else if (!(strcmp(line, "MULTICUT")))
+			fscanf(fptr, "%d", &config.MULTICUT);
+		else if (!(strcmp(line, "PROXIMAL")))
+			fscanf(fptr, "%d", &config.PROXIMAL);
+		else if (!(strcmp(line, "MAX_ITER")))
+			fscanf(fptr, "%d", &config.MAX_ITER);
+		else if (!(strcmp(line, "MASTER_TYPE")))
+			fscanf(fptr, "%d", &config.MASTER_TYPE);
 		else if (!strcmp(line, "//"))
 			fgets(comment, 2*BLOCKSIZE, fptr);
 		else {
