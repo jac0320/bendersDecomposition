@@ -74,6 +74,7 @@ typedef struct{
 
 typedef struct {
 	int			k;
+	int			maxCuts;
 	oneProblem 	*master;
 	oneProblem 	*subprob;
 	omegaType	*omega;
@@ -110,5 +111,12 @@ int calcMu(LPptr lp, int numCols, double *mubBar);
 int calcDeltaRow(numType *num, coordType *coord, omegaType *omega, deltaType *delta, vector pi, BOOL *newLambdaFlag);
 int calcSigma(numType *num, coordType *coord, sparseVector *bBar, sparseMatrix *CBar, vector pi, double mubBar, int idxLambda, BOOL newLambdaFlag,
 		sigmaType *sigma);
+
+/* cuts.c */
+int formSingleCut(probType **prob, cellType *cell);
+oneCut *newCut(int numIstar, int numObs, int betaLen);
+int addCut(LPptr lp, cutsType *cuts, int numRows, int numCols, int maxCuts, int etaIndex, oneCut *cut);
+void freeCutsType(cutsType *cuts);
+void freeOneCut(oneCut *cut);
 
 #endif /* BENDERS_H_ */

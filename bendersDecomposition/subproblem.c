@@ -56,7 +56,7 @@ int solveSubprobs(probType *prob, cellType *cell) {
 	return 0;
 }//END solveSubprobs()
 
-int computeRHS(numType *num, coordType *coord, vector rhsx, vector observ, vector U, LPptr lp) {
+int computeRHS(numType *num, coordType *coord, vector rhsx, vector observ, vector xk, LPptr lp) {
 	sparseVector bomega;
 	sparseMatrix Comega;
 	vector 	rhs;
@@ -84,7 +84,7 @@ int computeRHS(numType *num, coordType *coord, vector rhsx, vector observ, vecto
 		rhs[bomega.col[cnt]] += bomega.val[cnt];
 
 	/* change right-hand side with randomness in transfer matrix */
-	rhs = MSparsexvSub(&Comega, U, rhs);
+	rhs = MSparsexvSub(&Comega, xk, rhs);
 
 	/* change the right-hand side in the solver */
 	stat1 = changeRHS(lp, num->rows, indices, rhs+1);

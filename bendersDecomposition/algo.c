@@ -34,6 +34,12 @@ int algo(oneProblem *orig, stocType *stoc, timeType *tim) {
 			goto TERMINATE;
 		}
 
+		/* Step 2: Cut generation */
+		if ( formSingleCut(prob, cell) ) {
+			errMsg("algorithm", "algo", "failed to generate a new cut",0);
+			goto TERMINATE;
+		}
+
 	}//END main loop
 
 	TERMINATE:
@@ -101,6 +107,23 @@ cellType *newCell(probType **prob, stocType *stoc, vector u0) {
 
 	cell->candidU = duplicVector(u0, prob[1]->num->cols);
 	cell->incumbU = duplicVector(u0, prob[1]->num->cols);
+
+	if (config.PROXIMAL == 1) {
+		if ( config.MULTICUT == 1) {
+			cell->maxCuts = prob[0]->num->cols + cell->omega->cnt + 2;
+		}
+		else {
+			cell->maxCuts = prob[0]->num->cols + 3;
+		}
+	}
+	else
+		cell->maxCuts = config.MAX_ITER;
+
+	if ( !(cell->cuts = (cutsType *) mem_malloc(sizeof(cutsType))) )
+		errMsg("allocation", "newCell", "cell->cuts", 0);
+	if ( !(cell->cuts->vals = (oneCut **) arr_alloc(cell->maxCuts, oneCut *)) )
+		errMsg("allocation", "newCell", "cell->cuts->vals", 0);
+	cell->cuts->cnt = 0;
 
 	return cell;
 }//END newCell()
@@ -524,6 +547,7 @@ void freeCellType(cellType *cell) {
 		if (cell->omega) freeOmegaType(cell->omega);
 		if (cell->candidU) mem_free(cell->candidU);
 		if (cell->incumbU) mem_free(cell->incumbU);
+		if (cell->cuts) freeCutsType(cell->cuts);
 		mem_free(cell);
 	}
 
