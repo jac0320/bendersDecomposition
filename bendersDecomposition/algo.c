@@ -22,6 +22,20 @@ int algo(oneProblem *orig, stocType *stoc, timeType *tim) {
 		goto TERMINATE;
 	}
 
+	/* main loop of the algorithm */
+	while (cell->k < 1) {
+		if (cell->k % 100 == 0)
+			printf("\nIterarion-%3d ::", cell->k+1);
+		cell->k++;
+
+		/* Step 1: Solve the subproblems and create the optimality cut*/
+		if ( solveSubprobs(prob[1], cell) ) {
+			errMsg("algorithm", "algo", "failed to solve the subproblem",0);
+			goto TERMINATE;
+		}
+
+	}//END main loop
+
 	TERMINATE:
 	freeCellType(cell);
 	freeProbType(prob, tim->numRows);
@@ -29,11 +43,11 @@ int algo(oneProblem *orig, stocType *stoc, timeType *tim) {
 }//END algo()
 
 int setupAlgo(oneProblem *orig, stocType *stoc, timeType *tim, probType ***prob, cellType **cell) {
-	vector	xk = NULL, lb = NULL;
+	vector	u0 = NULL, lb = NULL;
 
 	/* setup mean value problem which will act as reference for all future computations */
-	xk = meanProblem(orig, stoc);
-	if ( xk == NULL ) {
+	u0 = meanProblem(orig, stoc);
+	if ( u0 == NULL ) {
 		errMsg("setup", "setupAlgo", "failed to setup and solve mean value problem", 0);
 		goto TERMINATE;
 	}
@@ -53,32 +67,40 @@ int setupAlgo(oneProblem *orig, stocType *stoc, timeType *tim, probType ***prob,
 	}
 
 	/* create the cells which will be used in the algorithms */
-	(*cell) = newCell((*prob), stoc);
+	(*cell) = newCell((*prob), stoc, u0);
 	if ((*cell) == NULL) {
 		errMsg("setup", "setupAlgo", "failed to setup the cell used by the algorithm", 0);
 		goto TERMINATE;
 	}
 
 	mem_free(lb);
-	mem_free(xk);
+	mem_free(u0);
 	return 0;
 
 	TERMINATE:
 	if (lb) mem_free(lb);
-	if (xk) mem_free(xk);
+	if (u0) mem_free(u0);
 	return 1;
 }//END setupAlgo()
 
-cellType *newCell(probType **prob, stocType *stoc) {
+cellType *newCell(probType **prob, stocType *stoc, vector u0) {
 	cellType *cell;
 
 	if (!(cell = (cellType *) mem_malloc (sizeof(cellType))))
 		errMsg("allocation", "newCell", "cell",0);
+	cell->k = 0;
 
-	cell->omega = newOmega(stoc);
+	/* stochastic elements */
+	cell->omega   = newOmega(stoc);
+	cell->sigma   = newSigma(config.MAX_ITER);
+	cell->delta   = newDelta(config.MAX_ITER, cell->omega->cnt);
 
-	cell->master = newMaster(prob[0], NULL, cell->omega);
+	/* oneProblems for master and subproblem */
+	cell->master  = newMaster(prob[0], NULL, cell->omega);
 	cell->subprob = newSubproblem(prob[1]);
+
+	cell->candidU = duplicVector(u0, prob[1]->num->cols);
+	cell->incumbU = duplicVector(u0, prob[1]->num->cols);
 
 	return cell;
 }//END newCell()
@@ -102,8 +124,7 @@ oneProblem *newMaster(probType *prob, cutsType *cuts, omegaType *omega) {
 	master->objsen = prob->sp->objsen;
 	master->marsz = prob->sp->mar + cutsCnt;	master->mar = prob->sp->mar + cutsCnt;	master->mac = prob->sp->mac; /* Note: mac does not include eta columms */
 	if ( config.MULTICUT ) {
-		// TODO: figure out how many columns to add
-		/* S additional columns to hold eta's (surrogates for individual recourse functions */
+		/* Additional columns to hold eta's (surrogates for individual recourse functions), one for each possible outcome */
 		master->macsz = prob->sp->mac + omega->cnt; master->cstorsz = prob->sp->cstorsz + omega->cnt*NAMESIZE;
 	}
 	else {
@@ -425,6 +446,8 @@ omegaType *newOmega(stocType *stoc) {
 			errMsg("allocation", "newOmega", "omega->probs", 0);
 		if ( !(omega->vals = (vector *) arr_alloc(config.SAA_OBS, vector)) )
 			errMsg("allocation", "newOmega", "omega->vals", 0);
+		if ( !(omega->istar = (intvec) arr_alloc(config.SAA_OBS, int)))
+			errMsg("allocation", "newOmega", "omega->istar", 0);
 		omega->numRV = stoc->numOmega;
 		omega->cnt = config.SAA_OBS;
 		for ( cnt = 0; cnt < omega->cnt; cnt++) {
@@ -432,10 +455,10 @@ omegaType *newOmega(stocType *stoc) {
 			if ( !(omega->vals[cnt] = (vector) arr_alloc(omega->numRV+1, double)) )
 				errMsg("allocation", "newOmega", "omega->vals[cnt]", 0);
 			for (i = 0; i < omega->numRV; i++) {
-	            val = scalit(0, 1, &config.RUN_SEED);
-	            for (j = 0; val > stoc->probs[i][j]; j++)
-	                /* loop until value falls below the cdf at j */;
-	            omega->vals[cnt][i+1] = stoc->vals[i][j] - stoc->mean[i];
+				val = scalit(0, 1, &config.RUN_SEED);
+				for (j = 0; val > stoc->probs[i][j]; j++)
+					/* loop until value falls below the cdf at j */;
+				omega->vals[cnt][i+1] = stoc->vals[i][j] - stoc->mean[i];
 			}
 		}
 	}
@@ -445,6 +468,8 @@ omegaType *newOmega(stocType *stoc) {
 			errMsg("allocation", "newOmega", "omega->probs", 0);
 		if ( !(omega->vals = (vector *) arr_alloc(stoc->numVals[0], vector)) )
 			errMsg("allocation", "newOmega", "omega->vals", 0);
+		if ( !(omega->istar = (intvec) arr_alloc(config.SAA_OBS, int)))
+			errMsg("allocation", "newOmega", "omega->istar", 0);
 		omega->numRV = stoc->numOmega;
 		omega->cnt=stoc->numVals[0];
 		for ( cnt = 0; cnt < omega->cnt; cnt++) {
@@ -460,12 +485,45 @@ omegaType *newOmega(stocType *stoc) {
 	return omega;
 }//END newOmega()
 
+sigmaType *newSigma(int numIter) {
+	sigmaType 	*sigma;
+
+	if (!(sigma = (sigmaType *) mem_malloc(sizeof(sigmaType))) )
+		errMsg("allocation", "newSigma", "sigma structure", 0);
+	if ( !(sigma->lambdaIdx = (intvec) arr_alloc(numIter, int)) )
+		errMsg("allocation", "newSigma", "sigma->lambdaIdx", 0);
+	if ( !(sigma->vals = (pixbCType *) arr_alloc(numIter, pixbCType)) )
+		errMsg("allocation", "newSigma", "sigma->vals", 0);
+	sigma->cnt = 0;
+
+	return sigma;
+}//END newSigma()
+
+deltaType *newDelta(int numIter, int maxObs) {
+	deltaType *delta;
+
+	if (!(delta = (deltaType *) mem_malloc(sizeof(deltaType))) )
+		errMsg("allocation", "newDelta", "delta", 0);
+	if ( !(delta->lambda = (vector *) arr_alloc(numIter, vector)) )
+		errMsg("allocation", "newLambda", "delta->vals", 0);
+	if ( !(delta->vals = (pixbCType **) arr_alloc(maxObs, pixbCType *)) )
+		errMsg("allocation", "newDelta", "delta->vals", 0);
+	delta->rows = 0;
+	delta->cols = maxObs;
+
+	return delta;
+}//END newDelta()
+
 void freeCellType(cellType *cell) {
 
 	if (cell) {
-		if (cell->omega) freeOmegaType(cell->omega);
 		if (cell->master) freeOneProblem(cell->master);
 		if (cell->subprob) freeOneProblem(cell->subprob);
+		if (cell->delta) freeDeltaType(cell->delta);
+		if (cell->sigma) freeSigmaType(cell->sigma);
+		if (cell->omega) freeOmegaType(cell->omega);
+		if (cell->candidU) mem_free(cell->candidU);
+		if (cell->incumbU) mem_free(cell->incumbU);
 		mem_free(cell);
 	}
 
@@ -480,8 +538,43 @@ void freeOmegaType(omegaType *omega) {
 			if (omega->vals[n]) mem_free(omega->vals[n]);
 		mem_free(omega->vals);
 	}
+	if (omega->istar) mem_free(omega->istar);
 	mem_free(omega);
 
-
-
 }//END freeOmegaType()
+
+void freeSigmaType(sigmaType *sigma) {
+	int n;
+
+	if (sigma) {
+		if (sigma->lambdaIdx) mem_free(sigma->lambdaIdx);
+		for ( n = 0; n < sigma->cnt; n++ )
+			if (sigma->vals[n].piC) mem_free(sigma->vals[n].piC);
+		if (sigma->vals) mem_free(sigma->vals);
+		mem_free(sigma);
+	}
+
+}//END freeSigmaType()
+
+void freeDeltaType (deltaType *delta) {
+	int n;
+
+	if (delta) {
+		if (delta->vals) {
+			for ( n = 0; n < delta->rows; n++ ) {
+				if (delta->vals[n])
+					mem_free(delta->vals[n]);
+			}
+			mem_free(delta->vals);
+		}
+		if (delta->lambda){
+			for ( n = 0; n < delta->rows; n++ ) {
+				if (delta->lambda[n])
+					mem_free(delta->lambda[n]);
+			}
+			mem_free(delta->lambda);
+		}
+		mem_free(delta);
+	}
+
+}//END freeDeltaType()

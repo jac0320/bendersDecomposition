@@ -15,7 +15,8 @@
 #include "smps.h"
 #include "prob.h"
 
-#define INPUT_CHECK
+#undef INPUT_CHECK
+#undef MODIFY_CHECK
 
 typedef struct{
 	int			SAA;
@@ -26,6 +27,8 @@ typedef struct{
 	int 		PROXIMAL;
 	int			MASTER_TYPE;
 	long long	RUN_SEED;
+	double		SAMPLE_FRACTION;
+	double		TOLERANCE;
 }configType;
 
 /* Omega stores the set of observations. Each observation consists of a vector of realization of random variables with discrete distributions and
@@ -35,8 +38,26 @@ typedef struct {
 	vector	probs;
 	vector	*vals;
 	int     numRV;
+	intvec	istar;
 } omegaType;
 
+typedef struct {
+	double	pib;
+	vector  piC;
+}pixbCType;
+
+typedef struct{
+	int 		cnt;
+	pixbCType	*vals;
+	intvec		lambdaIdx;
+}sigmaType;
+
+typedef struct {
+	int			rows;
+	int			cols;
+	vector  	*lambda;
+	pixbCType	**vals;
+}deltaType;
 
 typedef struct {
 	double 	alpha;					/* scalar value for the right-hand side */
@@ -52,10 +73,15 @@ typedef struct{
 }cutsType;
 
 typedef struct {
+	int			k;
 	oneProblem 	*master;
 	oneProblem 	*subprob;
 	omegaType	*omega;
+	sigmaType	*sigma;
+	deltaType	*delta;
 	cutsType	*cuts;
+	vector		candidU;
+	vector		incumbU;
 }cellType;
 
 /* benders.c */
@@ -65,11 +91,24 @@ int readConfig(int argc, string probName);
 /* algo.c */
 int algo(oneProblem *orig, stocType *stoc, timeType *tim);
 int setupAlgo(oneProblem *orig, stocType *stoc, timeType *tim, probType ***prob, cellType **cell);
-cellType *newCell(probType **prob, stocType *stoc);
+cellType *newCell(probType **prob, stocType *stoc, vector u0);
 oneProblem *newMaster(probType *prob, cutsType *cuts, omegaType *omega);
 oneProblem *newSubproblem(probType *prob);
 omegaType *newOmega(stocType *stoc);
+sigmaType *newSigma(int numIter);
+deltaType *newDelta(int numIter, int maxObs);
 void freeCellType(cellType *cell);
 void freeOmegaType(omegaType *omega);
+void freeSigmaType(sigmaType *sigma);
+void freeDeltaType (deltaType *delta);
+
+/* subproblem.c */
+int solveSubprobs(probType *prob, cellType *cell);
+int computeRHS(numType *num, coordType *coord, vector rhsx, vector observ, vector U, LPptr lp);
+int stocUpdate(LPptr lp, numType *num, coordType *coord, sparseMatrix *Cbar, sparseVector *bBar, sigmaType *sigma, deltaType *delta, omegaType *omega);
+int calcMu(LPptr lp, int numCols, double *mubBar);
+int calcDeltaRow(numType *num, coordType *coord, omegaType *omega, deltaType *delta, vector pi, BOOL *newLambdaFlag);
+int calcSigma(numType *num, coordType *coord, sparseVector *bBar, sparseMatrix *CBar, vector pi, double mubBar, int idxLambda, BOOL newLambdaFlag,
+		sigmaType *sigma);
 
 #endif /* BENDERS_H_ */

@@ -85,6 +85,7 @@ void parseCmdLine(int argc, string *argv, string probName) {
 
 }//END parseCmdLine
 
+/* subroutine to read all algorithm configuration parameters. */
 int readConfig(int argc, string probPath) {
 	FILE 	*fptr;
 	char	line[2*BLOCKSIZE], comment[2*BLOCKSIZE];
@@ -108,7 +109,7 @@ int readConfig(int argc, string probPath) {
 		else if (!(strcmp(line, "SAA_OBS")))
 			fscanf(fptr, "%d", &config.SAA_OBS);
 		else if (!(strcmp(line, "SAA_SEED")))
-			fscanf(fptr, "%lf", &config.SAA_SEED);
+			fscanf(fptr, "%lld", &config.SAA_SEED);
 		else if (!(strcmp(line, "MULTICUT")))
 			fscanf(fptr, "%d", &config.MULTICUT);
 		else if (!(strcmp(line, "PROXIMAL")))
@@ -117,6 +118,12 @@ int readConfig(int argc, string probPath) {
 			fscanf(fptr, "%d", &config.MAX_ITER);
 		else if (!(strcmp(line, "MASTER_TYPE")))
 			fscanf(fptr, "%d", &config.MASTER_TYPE);
+		else if (!(strcmp(line, "RUN_SEED")))
+			fscanf(fptr, "%lld", &config.RUN_SEED);
+		else if (!(strcmp(line, "SAMPLE_FRACTION")))
+			fscanf(fptr, "%lf", &config.SAMPLE_FRACTION);
+		else if (!(strcmp(line, "TOLERANCE")))
+			fscanf(fptr, "%lf", &config.TOLERANCE);
 		else if (!strcmp(line, "//"))
 			fgets(comment, 2*BLOCKSIZE, fptr);
 		else {
