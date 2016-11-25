@@ -17,6 +17,7 @@
 
 #undef INPUT_CHECK
 #undef MODIFY_CHECK
+#define ALGO_TRACE
 
 typedef struct{
 	int			SAA;
@@ -106,7 +107,8 @@ void freeDeltaType (deltaType *delta);
 /* subproblem.c */
 int solveSubprobs(probType *prob, cellType *cell);
 int computeRHS(numType *num, coordType *coord, vector rhsx, vector observ, vector U, LPptr lp);
-int stocUpdate(LPptr lp, numType *num, coordType *coord, sparseMatrix *Cbar, sparseVector *bBar, sigmaType *sigma, deltaType *delta, omegaType *omega);
+int stocUpdate(LPptr lp, numType *num, coordType *coord, sparseMatrix *Cbar, sparseVector *bBar, sigmaType *sigma, deltaType *delta, omegaType *omega,
+		vector rhsx);
 int calcMu(LPptr lp, int numCols, double *mubBar);
 int calcDeltaRow(numType *num, coordType *coord, omegaType *omega, deltaType *delta, vector pi, BOOL *newLambdaFlag);
 int calcSigma(numType *num, coordType *coord, sparseVector *bBar, sparseMatrix *CBar, vector pi, double mubBar, int idxLambda, BOOL newLambdaFlag,
@@ -114,8 +116,9 @@ int calcSigma(numType *num, coordType *coord, sparseVector *bBar, sparseMatrix *
 
 /* cuts.c */
 int formSingleCut(probType **prob, cellType *cell);
-oneCut *newCut(int numIstar, int numObs, int betaLen);
-int addCut(LPptr lp, cutsType *cuts, int numRows, int numCols, int maxCuts, int etaIndex, oneCut *cut);
+int formMultiCut(probType **prob, cellType *cell);
+oneCut *newCut(int betaLen);
+int addCut(LPptr lp, cutsType *cuts, int numRows, int betaLen, intvec betaIdx, int maxCuts, int etaIndex, oneCut *cut);
 void freeCutsType(cutsType *cuts);
 void freeOneCut(oneCut *cut);
 

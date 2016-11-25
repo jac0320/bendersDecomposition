@@ -12,10 +12,14 @@
 configType config;
 
 int solveSubprobs(probType *prob, cellType *cell) {
-	int 	obs, cnt, status;
 	vector	rhsx;
+	int 	obs, cnt, status;
+#ifdef ALGO_TRACE
+	double  val, cummVal = 0.0;
+	int 	idxSigma, idxLambda;
+#endif
 
-	if ( !(rhsx = (vector) arr_alloc(cell->subprob->mar+1, double)) )
+	if ( !(rhsx = (vector) arr_alloc(prob->num->rows+1, double)) )
 		errMsg("allocation", "solveSubprobs", "rhsx", 0);
 
 	/* 1. copy the original right-hand side and update it with endogenous information (master solution) */
@@ -46,11 +50,26 @@ int solveSubprobs(probType *prob, cellType *cell) {
 
 			/* 4. stochastic updates */
 			cell->omega->istar[obs] = stocUpdate(cell->subprob->lp, prob->num, prob->coord, prob->Cbar, prob->bBar, cell->sigma, cell->delta,
-					cell->omega);
+					cell->omega, rhsx);
+
+#ifdef ALGO_TRACE
+			idxSigma = cell->omega->istar[obs];
+			idxLambda = cell->sigma->lambdaIdx[idxSigma];
+			val = getObjective(cell->subprob->lp, PROB_LP); cummVal += cell->omega->probs[obs]*val;
+			printf("\nObs (%d) :: Objective function value = %.3lf\t", obs, val);
+			val = cell->sigma->vals[idxSigma].pib + cell->delta->vals[idxLambda][obs].pib -
+					vXv(cell->sigma->vals[idxSigma].piC, cell->candidU, prob->coord->colsC, prob->num->cntCcols) -
+					vXv(cell->delta->vals[idxLambda][obs].piC, cell->candidU, prob->coord->rvRows+prob->num->rvbOmCnt, prob->num->rvCOmCnt);
+			printf("Objective function estimate = %.3lf", val);
+#endif
 		}
 		else
 			cell->omega->istar[obs] = -1; /*indicates that the observation was not sampled */
 	}
+
+#ifdef ALGO_TRACE
+	printf("\n ====> Estimate of expected recourse at Iteration-%d solution = %lf.\n", cell->k, cummVal);
+#endif
 
 	mem_free(rhsx);
 	return 0;
@@ -100,7 +119,8 @@ int computeRHS(numType *num, coordType *coord, vector rhsx, vector observ, vecto
 	return 0;
 }//END computeRHS()
 
-int stocUpdate(LPptr lp, numType *num, coordType *coord, sparseMatrix *Cbar, sparseVector *bBar, sigmaType *sigma, deltaType *delta, omegaType *omega) {
+int stocUpdate(LPptr lp, numType *num, coordType *coord, sparseMatrix *Cbar, sparseVector *bBar, sigmaType *sigma, deltaType *delta, omegaType *omega,
+		vector rhsx) {
 	vector	pi;
 	double	mubBar;
 	int 	idxLambda, idxSigma;
@@ -220,6 +240,7 @@ int calcDeltaRow(numType *num, coordType *coord, omegaType *omega, deltaType *de
 			pixC[n-num->rvRowCnt] = delta->lambda[idxLambda][n]*omega->vals[obs][n];
 		delta->vals[idxLambda][obs].piC = pixC;
 	}
+
 	mem_free(pixC);
 
 	return idxLambda;

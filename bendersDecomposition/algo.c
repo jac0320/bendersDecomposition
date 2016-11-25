@@ -24,8 +24,12 @@ int algo(oneProblem *orig, stocType *stoc, timeType *tim) {
 
 	/* main loop of the algorithm */
 	while (cell->k < 1) {
+#ifdef ALGO_TRACE
+		printf("\nIterarion-%3d ::", cell->k+1);
+#else
 		if (cell->k % 100 == 0)
 			printf("\nIterarion-%3d ::", cell->k+1);
+#endif
 		cell->k++;
 
 		/* Step 1: Solve the subproblems and create the optimality cut*/
@@ -35,9 +39,17 @@ int algo(oneProblem *orig, stocType *stoc, timeType *tim) {
 		}
 
 		/* Step 2: Cut generation */
-		if ( formSingleCut(prob, cell) ) {
-			errMsg("algorithm", "algo", "failed to generate a new cut",0);
-			goto TERMINATE;
+		if ( config.MULTICUT == 0 ) {
+			if ( formSingleCut(prob, cell) ) {
+				errMsg("algorithm", "algo", "failed to generate a new cut",0);
+				goto TERMINATE;
+			}
+		}
+		else {
+			if ( formMultiCut(prob, cell) ) {
+				errMsg("algorithm", "algo", "failed to generate a new cut",0);
+				goto TERMINATE;
+			}
 		}
 
 	}//END main loop
@@ -447,7 +459,7 @@ oneProblem *newSubproblem(probType *prob) {
 
 omegaType *newOmega(stocType *stoc) {
 	omegaType 	*omega;
-	double		val;
+	double		val, cumm;
 	int 		cnt, i, j, maxObs;
 
 	if ( !(omega = (omegaType *) mem_malloc(sizeof(omegaType))) )
@@ -478,9 +490,9 @@ omegaType *newOmega(stocType *stoc) {
 			if ( !(omega->vals[cnt] = (vector) arr_alloc(omega->numRV+1, double)) )
 				errMsg("allocation", "newOmega", "omega->vals[cnt]", 0);
 			for (i = 0; i < omega->numRV; i++) {
-				val = scalit(0, 1, &config.RUN_SEED);
-				for (j = 0; val > stoc->probs[i][j]; j++)
-					/* loop until value falls below the cdf at j */;
+				val = scalit(0, 1, &config.RUN_SEED); cumm = 0.0;
+				for (j = 0; val > cumm; j++)
+					cumm += stoc->probs[i][j];
 				omega->vals[cnt][i+1] = stoc->vals[i][j] - stoc->mean[i];
 			}
 		}

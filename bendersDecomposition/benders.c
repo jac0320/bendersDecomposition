@@ -124,6 +124,8 @@ int readConfig(int argc, string probPath) {
 			fscanf(fptr, "%lf", &config.SAMPLE_FRACTION);
 		else if (!(strcmp(line, "TOLERANCE")))
 			fscanf(fptr, "%lf", &config.TOLERANCE);
+		else if (!(strcmp(line, "RUN_SEED")))
+			fscanf(fptr, "%lld", &config.RUN_SEED);
 		else if (!strcmp(line, "//"))
 			fgets(comment, 2*BLOCKSIZE, fptr);
 		else {
