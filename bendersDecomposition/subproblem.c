@@ -3,7 +3,7 @@
  *
  *  Created on: Nov 24, 2016
  *      Author: Harsha Gangammanavar
- *  Instituion: Southern Methodist University 
+ * Institution: Southern Methodist University
  *      e-mail: harsha(at)smu(dot)edu 
  */
 
@@ -39,7 +39,7 @@ int solveSubprobs(probType *prob, cellType *cell) {
 				if ( status == STAT_INFEASIBLE ) {
 					/* TODO: subproblem is infeasible add a feasibility cut */
 					printf("Warning:: Subproblem is infeasible: need to create feasibility cut.\n");
-					writeProblem(cell->subprob->lp, "infeasiblesub.lp");
+					writeProblem(cell->subprob->lp, "infeasSub.lp");
 					return 1;
 				}
 				else {

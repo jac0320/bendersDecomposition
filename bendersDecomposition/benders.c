@@ -3,7 +3,7 @@
  *
  *  Created on: Nov 22, 2016
  *      Author: Harsha Gangammanavar
- *  Instituion: Southern Methodist University 
+ * Institution: Southern Methodist University
  *      e-mail: harsha(at)smu(dot)edu 
  */
 
@@ -114,6 +114,12 @@ int readConfig(int argc, string probPath) {
 			fscanf(fptr, "%d", &config.MULTICUT);
 		else if (!(strcmp(line, "PROXIMAL")))
 			fscanf(fptr, "%d", &config.PROXIMAL);
+		else if (!(strcmp(line, "QUAD_SCALAR")))
+			fscanf(fptr, "%lf", &config.QUAD_SCALAR);
+		else if (!(strcmp(line, "R1")))
+			fscanf(fptr, "%lf", &config.R1);
+		else if (!(strcmp(line, "CUT_MULT")))
+			fscanf(fptr, "%d", &config.CUT_MULT);
 		else if (!(strcmp(line, "MAX_ITER")))
 			fscanf(fptr, "%d", &config.MAX_ITER);
 		else if (!(strcmp(line, "MASTER_TYPE")))

@@ -3,7 +3,7 @@
  *
  *  Created on: Nov 24, 2016
  *      Author: Harsha Gangammanavar
- *  Instituion: Southern Methodist University 
+ * Institution: Southern Methodist University
  *      e-mail: harsha(at)smu(dot)edu 
  */
 
@@ -173,12 +173,16 @@ int formMultiCut(probType **prob, cellType *cell) {
 			errMsg("algorithm", "formCandidCut", "failed to add the cut stage problem", 0);
 			return -1;
 		}
+
+#ifdef ALGO_TRACE
+	printf(" ====> Cut height at Iteration-%d solution for observation-%d =  %lf\n", cell->k, obs,
+			cut->alpha - vXv(cut->beta, cell->candidU, prob[1]->coord->colsC, prob[1]->num->cntCcols));
+#endif
 	}
 
 	mem_free(pixC);
 	return 0;
 }//END formMultiCut()
-
 
 /* subroutine to the allocate memory to oneCut structure and initialize its elements with default values */
 oneCut *newCut(int betaLen) {

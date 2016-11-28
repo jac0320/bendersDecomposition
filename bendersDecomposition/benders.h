@@ -3,7 +3,7 @@
  *
  *  Created on: Nov 22, 2016
  *      Author: Harsha Gangammanavar
- *  Instituion: Southern Methodist University 
+ * Institution: Southern Methodist University
  *      e-mail: harsha(at)smu(dot)edu 
  */
 
@@ -16,8 +16,8 @@
 #include "prob.h"
 
 #undef INPUT_CHECK
-#undef MODIFY_CHECK
-#define ALGO_TRACE
+#define MODIFY_CHECK
+#undef ALGO_TRACE
 
 typedef struct{
 	int			SAA;
@@ -25,7 +25,10 @@ typedef struct{
 	long long	SAA_SEED;
 	int 		MAX_ITER;
 	int			MULTICUT;
+	int			CUT_MULT;
 	int 		PROXIMAL;
+	double		QUAD_SCALAR;
+	double		R1;
 	int			MASTER_TYPE;
 	long long	RUN_SEED;
 	double		SAMPLE_FRACTION;
@@ -84,6 +87,10 @@ typedef struct {
 	cutsType	*cuts;
 	vector		candidU;
 	vector		incumbU;
+	vector		masterPi;
+	double		incumbEst;
+	double		improve;
+	double 		quadScalar;
 }cellType;
 
 /* benders.c */
@@ -121,5 +128,14 @@ oneCut *newCut(int betaLen);
 int addCut(LPptr lp, cutsType *cuts, int numRows, int betaLen, intvec betaIdx, int maxCuts, int etaIndex, oneCut *cut);
 void freeCutsType(cutsType *cuts);
 void freeOneCut(oneCut *cut);
+
+/* master.c */
+int solveMaster(probType *prob, cellType *cell);
+void checkImprovement(probType **prob, cellType *cell);
+double maxCutHeight(cutsType *cuts, vector x, intvec betaIdx, int betaLen);
+int replaceIncumbent(probType **prob, cellType *cell, double candidEst);
+int constructQP(LPptr lp, int numCols, double regSigma);
+int changeQPrhs(LPptr lp, intvec betaCols, int betaLen, int numRows, sparseMatrix *Dbar, sparseVector *bBar, cutsType *cuts, vector X);
+int changeQPbds(LPptr lp, int numCols, vector bdl, vector bdu, vector X);
 
 #endif /* BENDERS_H_ */
