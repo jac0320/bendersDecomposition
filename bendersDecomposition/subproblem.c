@@ -241,8 +241,6 @@ int calcDeltaRow(numType *num, coordType *coord, omegaType *omega, deltaType *de
 		delta->vals[idxLambda][obs].piC = pixC;
 	}
 
-	mem_free(pixC);
-
 	return idxLambda;
 }//END calcDeltaRow()
 

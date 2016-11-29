@@ -104,12 +104,12 @@ cellType *newCell(probType **prob, stocType *stoc, vector u0);
 oneProblem *newMaster(probType *prob, cutsType *cuts, omegaType *omega);
 oneProblem *newSubproblem(probType *prob);
 omegaType *newOmega(stocType *stoc);
-sigmaType *newSigma(int numIter);
+sigmaType *newSigma(int numIter, int maxObs);
 deltaType *newDelta(int numIter, int maxObs);
 void freeCellType(cellType *cell);
 void freeOmegaType(omegaType *omega);
 void freeSigmaType(sigmaType *sigma);
-void freeDeltaType (deltaType *delta);
+void freeDeltaType (deltaType *delta, int omegaCnt);
 
 /* subproblem.c */
 int solveSubprobs(probType *prob, cellType *cell);

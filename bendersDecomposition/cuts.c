@@ -20,12 +20,12 @@ int formSingleCut(probType **prob, cellType *cell) {
 	/* 0. allocate memory to new cut */
 	cut = newCut(prob[1]->num->cntCcols);
 	if ( cut == NULL ) {
-		errMsg("algorithm", "formCandidCut", "failed to allocate memory to the new cut", 0);
+		errMsg("algorithm", "formSingleCut", "failed to allocate memory to the new cut", 0);
 		return -1;
 	}
 
 	if ( !(pixC = (vector) arr_alloc(cell->sigma->cnt, double)) )
-		errMsg("allocation", "stageCut", "pixC", 0);
+		errMsg("allocation", "formSingleCut", "pixC", 0);
 
 	/* calculate [\bar{b}^\top \pi - (\bar{C}_t^\top \pi)x] one at a time for all entries in sigma */
 	for ( cnt = 0; cnt < cell->sigma->cnt; cnt++ ) {
@@ -57,13 +57,13 @@ int formSingleCut(probType **prob, cellType *cell) {
 		/* 2a. Average using these pi's to calculate the cut coefficients. Here we are multiplying the coefficients by the probability
 			   of each observations: Intercept term first */
 		istar = cell->omega->istar[obs];
-		cut->alpha += (cell->sigma->vals[istar].pib + cell->delta->vals[istar][obs].pib)* cell->omega->probs[obs];
+		cut->alpha += (cell->sigma->vals[istar].pib + cell->delta->vals[cell->sigma->lambdaIdx[istar]][obs].pib)* cell->omega->probs[obs];
 
 		/* 2b. Slope term next */
 		for (i = 1; i <= prob[1]->num->cntCcols; i++)
 			cut->beta[prob[1]->coord->colsC[i]] += cell->sigma->vals[istar].piC[i] * cell->omega->probs[obs];
 		for (i = 1; i <= prob[1]->num->rvColCnt; i++)
-			cut->beta[prob[1]->coord->rvCols[i]] += cell->delta->vals[istar][obs].piC[i] * cell->omega->probs[obs];
+			cut->beta[prob[1]->coord->rvCols[i]] += cell->delta->vals[cell->sigma->lambdaIdx[istar]][obs].piC[i] * cell->omega->probs[obs];
 	}
 
 	mem_free(pixC);
@@ -79,15 +79,17 @@ int formSingleCut(probType **prob, cellType *cell) {
 			}
 		cnt++;
 	}
-	cut->alphaIncumb = cut->alpha + vXv(cut->beta, cell->incumbU, NULL, prob[0]->num->cols);
+	cut->alphaIncumb = cut->alpha + vXv(cut->beta, cell->incumbU, prob[1]->coord->colsC, prob[1]->num->cntCcols);
 
 	/* 4. Add cut to the master problem cut structure as well as on the solver */
 	istar = addCut(cell->master->lp, cell->cuts, prob[0]->num->rows, prob[1]->num->cntCcols, prob[1]->coord->colsC,
-					cell->maxCuts, prob[0]->num->cols+obs, cut);
+					cell->maxCuts, prob[0]->num->cols+0, cut);
 	if ( istar < 0 ) {
-		errMsg("algorithm", "formCandidCut", "failed to add the cut stage problem", 0);
+		errMsg("algorithm", "formSingleCut", "failed to add the cut to master problem", 0);
+		freeOneCut(cut);
 		return -1;
 	}
+
 
 #ifdef ALGO_TRACE
 	printf(" ====> Cut height at Iteration-%d solution                    = %lf\n", cell->k,
@@ -105,7 +107,7 @@ int formMultiCut(probType **prob, cellType *cell) {
 
 
 	if ( !(pixC = (vector) arr_alloc(cell->sigma->cnt, double)) )
-		errMsg("allocation", "stageCut", "pixC", 0);
+		errMsg("allocation", "formMultiCut", "pixC", 0);
 
 	/* calculate [\bar{b}^\top \pi - (\bar{C}_t^\top \pi)x] one at a time for all entries in sigma */
 	for ( cnt = 0; cnt < cell->sigma->cnt; cnt++ ) {
@@ -137,7 +139,7 @@ int formMultiCut(probType **prob, cellType *cell) {
 		/* 2. allocate memory to new cut */
 		cut = newCut(prob[1]->num->cntCcols);
 		if ( cut == NULL ) {
-			errMsg("algorithm", "formCandidCut", "failed to allocate memory to the new cut", 0);
+			errMsg("algorithm", "formMultiCut", "failed to allocate memory to the new cut", 0);
 			return -1;
 		}
 
@@ -170,7 +172,7 @@ int formMultiCut(probType **prob, cellType *cell) {
 		istar = addCut(cell->master->lp, cell->cuts, prob[0]->num->rows, prob[1]->num->cntCcols, prob[1]->coord->colsC,
 				cell->maxCuts, prob[0]->num->cols+obs, cut);
 		if ( istar < 0 ) {
-			errMsg("algorithm", "formCandidCut", "failed to add the cut stage problem", 0);
+			errMsg("algorithm", "formMultiCut", "failed to add the cut stage problem", 0);
 			return -1;
 		}
 
@@ -214,13 +216,13 @@ int addCut(LPptr lp, cutsType *cuts, int numRows, int betaLen, intvec betaIdx, i
 
 	/* TODO: make sure there is room to add a new cut */
 	if (cuts->cnt >= maxCuts) {
-		errMsg("algorithm", "addCut", "ran out of memory for fine cuts", 0);
-		return -1;
+		errMsg("algorithm", "addCut", "ran out of memory for cuts", 0);
+		goto TERMINATE;
 	}
 
 	if ( addRow(lp, betaLen+1, cut->alpha, cut->sense, 0, indices, cut->beta) ) {
 		errMsg("solver", "addCut", "failed to add the new cut to solver problem", 0);
-		return -1;
+		goto TERMINATE;
 	}
 
 	// TODO: verify the cut row number once you switch to quadratics
@@ -229,6 +231,10 @@ int addCut(LPptr lp, cutsType *cuts, int numRows, int betaLen, intvec betaIdx, i
 
 	mem_free(indices);
 	return cuts->cnt++;
+
+	TERMINATE:
+	mem_free(indices);
+	return -1;
 }//END addCut()
 
 void freeCutsType(cutsType *cuts) {

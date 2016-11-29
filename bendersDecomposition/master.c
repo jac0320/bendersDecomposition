@@ -13,15 +13,16 @@ configType config;
 int solveMaster(probType *prob, cellType *cell) {
 	int 	status, n;
 
-	if ( config.MASTER_TYPE == PROB_QP ) {
-		/* In regularized QP method, switch to barrier optimizer to solve quadratic master problem */
-		changeSolverType(ALG_BARRIER);
-
 #ifdef MODIFY_CHECK
 		writeProblem(cell->master->lp, "master_k.lp");
 #endif
 
-		if ( solveProblem(cell->master->lp, cell->master->name, PROB_QP, &status) ) {
+	if ( config.PROXIMAL == 1) {
+		/* In regularized QP method, switch to barrier optimizer to solve quadratic master problem */
+		changeSolverType(ALG_BARRIER);
+
+		/* solve the problem as a quadratic program */
+		if ( solveProblem(cell->master->lp, cell->master->name, cell->master->type, &status) ) {
 			if ( status == STAT_INFEASIBLE ) {
 				/*  master is infeasible, terminate the algorithm */
 				printf("Master is infeasible, terminating the algorithm.\n");
@@ -34,8 +35,15 @@ int solveMaster(probType *prob, cellType *cell) {
 			}
 		}
 
+		/* obtain primal solution */
 		if ( getPrimal(cell->master->lp, cell->candidU, prob->num->prevCols) ) {
 			errMsg("algorithm", "solveMaster", "failed to obtain the optimal primal solution", 0);
+			return 1;
+		}
+
+		/* obtain dual solution which will be used to identify loose cuts */
+		if ( getDual(cell->master->lp, cell->masterPi, prob->num->prevRows+cell->cuts->cnt) ) {
+			errMsg("algorithm", "solveMaster", "failed to obtain the optimal dual solution", 0);
 			return 1;
 		}
 
@@ -49,6 +57,27 @@ int solveMaster(probType *prob, cellType *cell) {
 
 		/* Note improvement at candidate solution with respect to current approximation */
 		cell->improve = maxCutHeight(cell->cuts, cell->candidU, prob->coord->colsC, prob->num->cntCcols) - cell->incumbEst;
+	}
+	else if ( cell->master->type == PROB_LP ) {
+		/* solve the problem as a linear program */
+		if ( solveProblem(cell->master->lp, cell->master->name, cell->master->type, &status) ) {
+			if ( status == STAT_INFEASIBLE ) {
+				/*  master is infeasible, terminate the algorithm */
+				printf("Master is infeasible, terminating the algorithm.\n");
+				writeProblem(cell->subprob->lp, "infeasMaster.lp");
+				return 1;
+			}
+			else {
+				errMsg("algorithm", "solveMaster", "failed to solve problem in solver", 0);
+				return 1;
+			}
+		}
+
+		/* obtain primal solution */
+		if ( getPrimal(cell->master->lp, cell->candidU, prob->num->prevCols) ) {
+			errMsg("algorithm", "solveMaster", "failed to obtain the optimal primal solution", 0);
+			return 1;
+		}
 	}
 
 	return 0;
@@ -76,7 +105,6 @@ void checkImprovement(probType **prob, cellType *cell) {
 }//END checkImprovement()
 
 int replaceIncumbent(probType **prob, cellType *cell, double candidEst) {
-	int n;
 
 	/* replace the incumbent solution with the current candidate solution */
 	copyVector(cell->candidU, cell->incumbU, prob[0]->num->cols, 1);
@@ -129,7 +157,7 @@ int changeQPrhs(LPptr lp, intvec betaCols, int betaLen, int numRows, sparseMatri
 	intvec indices;
 	int		n;
 
-	if ( !(qpRHS = (vector) arr_alloc(numRows+1, double)))
+	if ( !(qpRHS = (vector) arr_alloc(numRows+cuts->cnt+1, double)))
 			errMsg("allocation", "computeRHS", "indices", 0);
 	if ( !(indices = (intvec) arr_alloc(numRows, int)))
 		errMsg("allocation", "computeRHS", "indices", 0);
