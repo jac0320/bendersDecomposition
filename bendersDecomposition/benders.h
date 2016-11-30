@@ -23,6 +23,7 @@ typedef struct{
 	int			SAA;
 	int 		SAA_OBS;
 	long long	SAA_SEED;
+	int			MIN_ITER;
 	int 		MAX_ITER;
 	int			MULTICUT;
 	int			CUT_MULT;
@@ -88,6 +89,7 @@ typedef struct {
 	vector		candidU;
 	vector		incumbU;
 	vector		masterPi;
+	double		candidEst;
 	double		incumbEst;
 	double		improve;
 	double 		quadScalar;
@@ -137,5 +139,8 @@ int replaceIncumbent(probType **prob, cellType *cell, double candidEst);
 int constructQP(LPptr lp, int numCols, double regSigma);
 int changeQPrhs(LPptr lp, intvec betaCols, int betaLen, int numRows, sparseMatrix *Dbar, sparseVector *bBar, cutsType *cuts, vector X);
 int changeQPbds(LPptr lp, int numCols, vector bdl, vector bdu, vector X);
+
+/* optimal.c */
+BOOL optimal(probType *prob, cellType *cell);
 
 #endif /* BENDERS_H_ */

@@ -56,7 +56,8 @@ int solveMaster(probType *prob, cellType *cell) {
 		changeSolverType(ALG_AUTOMATIC);
 
 		/* Note improvement at candidate solution with respect to current approximation */
-		cell->improve = maxCutHeight(cell->cuts, cell->candidU, prob->coord->colsC, prob->num->cntCcols) - cell->incumbEst;
+		cell->improve = vXv(cell->master->objx-1, cell->candidU, NULL, prob->num->prevCols) +
+				maxCutHeight(cell->cuts, cell->candidU, prob->coord->colsC, prob->num->cntCcols) - cell->incumbEst;
 	}
 	else if ( cell->master->type == PROB_LP ) {
 		/* solve the problem as a linear program */
@@ -84,20 +85,17 @@ int solveMaster(probType *prob, cellType *cell) {
 }//END solveMaster()
 
 void checkImprovement(probType **prob, cellType *cell) {
-	double candidEst;
 
-	cell->incumbEst = vXv(cell->master->objx, cell->incumbU, NULL, prob[0]->num->cols) +
+	cell->incumbEst = vXv(cell->master->objx-1, cell->incumbU, NULL, prob[0]->num->cols) +
 			maxCutHeight(cell->cuts, cell->incumbU, prob[1]->coord->colsC, prob[1]->num->cntCcols);
-	candidEst = vXv(cell->master->objx, cell->candidU, NULL, prob[0]->num->cols) +
-			maxCutHeight(cell->cuts, cell->candidU, prob[1]->coord->colsC, prob[1]->num->cntCcols);
 
 #ifdef ALGO_TRACE
 	printf("Incumbent estimate = %lf\tCandidate estimate = %lf\n", cell->incumbEst, candidEst);
 #endif
 
-	if ( (candidEst - cell->incumbEst) < config.R1*cell->improve) {
+	if ( (cell->candidEst - cell->incumbEst) < config.R1*cell->improve) {
 		/* incumbent change is recommended */
-		if ( replaceIncumbent(prob, cell, candidEst) )
+		if ( replaceIncumbent(prob, cell, cell->candidEst) )
 			errMsg("algorithm", "checkImprovement", "failed to replace incumbent", 0);
 		printf("+"); fflush(stdout);
 	}
@@ -234,7 +232,7 @@ double maxCutHeight(cutsType *cuts, vector x, intvec betaIdx, int betaLen) {
 			ht = val;
 	}
 
-	return val;
+	return ht;
 }//END maxCutHeight()
 
 oneProblem *newMaster(probType *prob, cutsType *cuts, omegaType *omega) {

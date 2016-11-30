@@ -23,7 +23,7 @@ int algo(oneProblem *orig, stocType *stoc, timeType *tim) {
 	}
 
 	/* main loop of the algorithm */
-	while (cell->k < config.MAX_ITER) {
+	while ( TRUE ) {
 #ifdef ALGO_TRACE
 		printf("\nIterarion-%3d ::", cell->k+1);
 #else
@@ -31,6 +31,10 @@ int algo(oneProblem *orig, stocType *stoc, timeType *tim) {
 			printf("\nIterarion-%3d ::", cell->k+1);
 #endif
 		cell->k++;
+
+		/* Step 0: Check for optimality */
+		if ( optimal(prob[0], cell) )
+			break;
 
 		/* Step 1: Solve the subproblems and create the optimality cut*/
 		if ( solveSubprobs(prob[1], cell) ) {
@@ -131,16 +135,18 @@ cellType *newCell(probType **prob, stocType *stoc, vector u0) {
 	cell->master  = newMaster(prob[0], NULL, cell->omega);
 	cell->subprob = newSubproblem(prob[1]);
 
-	cell->candidU = duplicVector(u0, prob[1]->num->cols);
+	cell->candidU 	= duplicVector(u0, prob[1]->num->cols);
+	cell->candidEst = vXv(cell->master->objx-1, cell->candidU, NULL, prob[0]->num->cols);
 
 	if (config.PROXIMAL == 1) {
 		cell->incumbU = duplicVector(u0, prob[1]->num->cols);
-		cell->incumbEst = vXv(cell->master->objx, cell->incumbU, NULL, prob[0]->num->cols);
+		cell->incumbEst = cell->candidEst;
 		if ( config.MULTICUT == 1) {
 			cell->maxCuts = config.CUT_MULT*prob[0]->num->cols + cell->omega->cnt + 1;
 		}
 		else {
 			cell->maxCuts = config.CUT_MULT*prob[0]->num->cols + 1;
+			cell->maxCuts = config.MAX_ITER;
 		}
 		if ( !(cell->masterPi = (vector) arr_alloc(prob[0]->num->rows + cell->maxCuts + 1, double)) )
 			errMsg("allocation", "newCell", "cell->masterPi", 0);
@@ -358,7 +364,7 @@ omegaType *newOmega(stocType *stoc) {
 				errMsg("allocation", "newOmega", "omega->vals[n]", 0);
 			j = 1; omega->probs[cnt] = 1.0;
 			for ( i = omega->numRV-1; i >= 0; i-- ) {
-				omega->vals[cnt][i+1] = stoc->vals[i][cnt/(j) % stoc->numVals[i]];
+				omega->vals[cnt][i+1] = stoc->vals[i][cnt/(j) % stoc->numVals[i]] - stoc->mean[i];
 				omega->probs[cnt] *= stoc->probs[i][cnt/(j) % stoc->numVals[i]];
 				j *= stoc->numVals[i];
 			}

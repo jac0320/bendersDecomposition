@@ -122,6 +122,8 @@ int readConfig(int argc, string probPath) {
 			fscanf(fptr, "%d", &config.CUT_MULT);
 		else if (!(strcmp(line, "MAX_ITER")))
 			fscanf(fptr, "%d", &config.MAX_ITER);
+		else if (!(strcmp(line, "MIN_ITER")))
+			fscanf(fptr, "%d", &config.MIN_ITER);
 		else if (!(strcmp(line, "MASTER_TYPE")))
 			fscanf(fptr, "%d", &config.MASTER_TYPE);
 		else if (!(strcmp(line, "RUN_SEED")))

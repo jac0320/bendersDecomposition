@@ -79,7 +79,9 @@ int formSingleCut(probType **prob, cellType *cell) {
 			}
 		cnt++;
 	}
-	cut->alphaIncumb = cut->alpha + vXv(cut->beta, cell->incumbU, prob[1]->coord->colsC, prob[1]->num->cntCcols);
+
+	if ( config.PROXIMAL == 1 )
+		cut->alphaIncumb = cut->alpha + vXv(cut->beta, cell->incumbU, prob[1]->coord->colsC, prob[1]->num->cntCcols);
 
 	/* 4. Add cut to the master problem cut structure as well as on the solver */
 	istar = addCut(cell->master->lp, cell->cuts, prob[0]->num->rows, prob[1]->num->cntCcols, prob[1]->coord->colsC,
@@ -90,10 +92,12 @@ int formSingleCut(probType **prob, cellType *cell) {
 		return -1;
 	}
 
+	cell->candidEst = vXv(cell->master->objx-1, cell->candidU, NULL, prob[0]->num->cols) +
+			cut->alpha - vXv(cut->beta, cell->candidU, prob[1]->coord->colsC, prob[1]->num->cntCcols);
 
 #ifdef ALGO_TRACE
 	printf(" ====> Cut height at Iteration-%d solution                    = %lf\n", cell->k,
-			cut->alpha - vXv(cut->beta, cell->candidU, prob[1]->coord->colsC, prob[1]->num->cntCcols));
+			cell->candidEst);
 #endif
 
 	return 0;
