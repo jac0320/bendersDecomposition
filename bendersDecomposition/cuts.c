@@ -81,7 +81,9 @@ int formSingleCut(probType **prob, cellType *cell) {
 	}
 
 	if ( config.PROXIMAL == 1 )
-		cut->alphaIncumb = cut->alpha + vXv(cut->beta, cell->incumbU, prob[1]->coord->colsC, prob[1]->num->cntCcols);
+		cut->alphaIncumb = cut->alpha - vXv(cut->beta, cell->incumbU, prob[1]->coord->colsC, prob[1]->num->cntCcols);
+	else
+		cut->alphaIncumb = cut->alpha;
 
 	/* 4. Add cut to the master problem cut structure as well as on the solver */
 	istar = addCut(cell->master->lp, cell->cuts, prob[0]->num->rows, prob[1]->num->cntCcols, prob[1]->coord->colsC,
@@ -94,10 +96,12 @@ int formSingleCut(probType **prob, cellType *cell) {
 
 	cell->candidEst = vXv(cell->master->objx-1, cell->candidU, NULL, prob[0]->num->cols) +
 			cut->alpha - vXv(cut->beta, cell->candidU, prob[1]->coord->colsC, prob[1]->num->cntCcols);
+	if ( cell->k == 1)
+		cell->incumbEst = cell->candidEst;
 
 #ifdef ALGO_TRACE
 	printf(" ====> Cut height at Iteration-%d solution                    = %lf\n", cell->k,
-			cell->candidEst);
+			cut->alpha - vXv(cut->beta, cell->candidU, prob[1]->coord->colsC, prob[1]->num->cntCcols));
 #endif
 
 	return 0;
@@ -170,7 +174,11 @@ int formMultiCut(probType **prob, cellType *cell) {
 					}
 			cnt++;
 		}
-		cut->alphaIncumb = cut->alpha + vXv(cut->beta, cell->incumbU, NULL, prob[0]->num->cols);
+
+		if ( config.PROXIMAL == 1 )
+			cut->alphaIncumb = cut->alpha - vXv(cut->beta, cell->incumbU, NULL, prob[0]->num->cols);
+		else
+			cut->alphaIncumb = cut->alpha;
 
 		/* 5. Add cut to the master problem cut structure as well as on the solver */
 		istar = addCut(cell->master->lp, cell->cuts, prob[0]->num->rows, prob[1]->num->cntCcols, prob[1]->coord->colsC,
@@ -224,7 +232,7 @@ int addCut(LPptr lp, cutsType *cuts, int numRows, int betaLen, intvec betaIdx, i
 		goto TERMINATE;
 	}
 
-	if ( addRow(lp, betaLen+1, cut->alpha, cut->sense, 0, indices, cut->beta) ) {
+	if ( addRow(lp, betaLen+1, cut->alphaIncumb, cut->sense, 0, indices, cut->beta) ) {
 		errMsg("solver", "addCut", "failed to add the new cut to solver problem", 0);
 		goto TERMINATE;
 	}

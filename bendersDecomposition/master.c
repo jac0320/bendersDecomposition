@@ -52,8 +52,17 @@ int solveMaster(probType *prob, cellType *cell) {
 			cell->candidU[n] += cell->incumbU[n];
 		cell->candidU[0] = oneNorm(cell->candidU, prob->num->prevCols);
 
+#if 1
+		double val1, val2;
+		val1 = vXv(cell->master->objx-1, cell->candidU, NULL, prob->num->prevCols) +
+				getPrimalPoint(cell->master->lp, cell->master->macsz-1);
+		val2 = vXv(cell->master->objx-1, cell->incumbU, NULL, prob->num->prevCols) +
+						maxCutHeight(cell->cuts, cell->incumbU, prob->coord->colsC, prob->num->cntCcols);
+		printf("Candidate = %lf\tIncumbent = %lf\n", val1, val2);
+#endif
+
 		/* Switch back to primal/dual simplex solver */
-		changeSolverType(ALG_AUTOMATIC);
+ 		changeSolverType(ALG_AUTOMATIC);
 
 		/* Note improvement at candidate solution with respect to current approximation */
 		cell->improve = vXv(cell->master->objx-1, cell->candidU, NULL, prob->num->prevCols) +
@@ -86,11 +95,8 @@ int solveMaster(probType *prob, cellType *cell) {
 
 void checkImprovement(probType **prob, cellType *cell) {
 
-	cell->incumbEst = vXv(cell->master->objx-1, cell->incumbU, NULL, prob[0]->num->cols) +
-			maxCutHeight(cell->cuts, cell->incumbU, prob[1]->coord->colsC, prob[1]->num->cntCcols);
-
 #ifdef ALGO_TRACE
-	printf("Incumbent estimate = %lf\tCandidate estimate = %lf\n", cell->incumbEst, candidEst);
+	printf("Incumbent estimate = %lf\tCandidate estimate = %lf\n", cell->incumbEst, cell->candidEst);
 #endif
 
 	if ( (cell->candidEst - cell->incumbEst) < config.R1*cell->improve) {
@@ -116,8 +122,6 @@ int replaceIncumbent(probType **prob, cellType *cell, double candidEst) {
 		errMsg("algorithm", "replaceIncumbent", "failed to change the bounds after incumbent update", 0);
 		return 1;
 	}
-
-
 
 	cell->incumbEst = candidEst;
 	cell->improve	= 0.0;
@@ -173,6 +177,10 @@ int changeQPrhs(LPptr lp, intvec betaCols, int betaLen, int numRows, sparseMatri
 	/* changing cut right-hand side of stage subproblem */
 	for ( n = 0; n < cuts->cnt; n++ )
 		qpRHS[cuts->vals[n]->rowNum+1] = cuts->vals[n]->alpha - vXv(cuts->vals[n]->beta, X, betaCols, betaLen);
+
+	/* change the right-hand side on the solver */
+	if ( changeRHS(lp, numRows, indices, qpRHS) )
+		errMsg("solver", "chanegQPrhs", "failed to change QP right-hand side on solver", 0);
 
 	mem_free(indices); mem_free(qpRHS);
 
