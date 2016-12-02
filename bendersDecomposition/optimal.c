@@ -29,6 +29,7 @@ BOOL optimal(probType *prob, cellType *cell) {
 	objVal = vXv(cell->master->objx-1, cell->candidU, NULL, prob->num->cols);
 	for ( n = prob->num->cols; n < cell->master->macsz; n++ )
 		objVal += primal[n+1];
+	mem_free(primal);
 
 	if (cell->master->type == PROB_LP) {
 		if ( DBL_ABS(objVal - cell->candidEst) <= config.TOLERANCE ) {
@@ -38,10 +39,12 @@ BOOL optimal(probType *prob, cellType *cell) {
 	}
 	else if (cell->master->type == PROB_QP) {
 		if ( DBL_ABS(objVal - cell->incumbEst) <= config.TOLERANCE ) {
-			printf("\nOptimal objective function value = %lf\n", objVal);
+			printf("\nOptimal objective function value = %lf\n", cell->incumbEst);
 			return TRUE;
 		}
 	}
+
+	printf("%lf\n", cell->incumbEst);
 
 	return FALSE;
 }//END optimal()

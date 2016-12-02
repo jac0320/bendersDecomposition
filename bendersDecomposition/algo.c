@@ -25,10 +25,10 @@ int algo(oneProblem *orig, stocType *stoc, timeType *tim) {
 	/* main loop of the algorithm */
 	while ( TRUE ) {
 #ifdef ALGO_TRACE
-		printf("\nIterarion-%3d ::", cell->k+1);
+		printf("\nIterarion-%3d :: ", cell->k+1);
 #else
 		if (cell->k % 100 == 0)
-			printf("\nIterarion-%3d ::", cell->k+1);
+			printf("\nIterarion-%3d :: ", cell->k+1); fflush(stdout);
 #endif
 		cell->k++;
 
@@ -310,7 +310,7 @@ oneProblem *newSubproblem(probType *prob) {
 omegaType *newOmega(stocType *stoc) {
 	omegaType 	*omega;
 	double		val, cumm;
-	int 		cnt, i, j, maxObs;
+	int 		cnt, i, j, maxObs, obsLimit = 10000;
 
 	if ( !(omega = (omegaType *) mem_malloc(sizeof(omegaType))) )
 		errMsg("allocation","newOmega", "omega", 0);
@@ -324,9 +324,9 @@ omegaType *newOmega(stocType *stoc) {
 			cnt++;
 		}
 	}
-	if ( config.SAA == 1 || maxObs > 10000 ) {
+	if ( config.SAA == 1 || maxObs > obsLimit ) {
 		/* SAA */
-		printf("Using SAA configuration or maximum number of possible observations exceed 1 million.\nEnter the number of observations to be used in SAA : ");
+		printf("Using SAA configuration or maximum number of possible observations is a large number (> %d).\nEnter the number of observations to be used in SAA : ", obsLimit);
 		scanf("%d", &config.SAA_OBS);
 
 		if ( !(omega->probs = (vector) arr_alloc(config.SAA_OBS, double)))
@@ -402,9 +402,9 @@ sigmaType *newSigma(int numIter, int maxObs) {
 
 	if (!(sigma = (sigmaType *) mem_malloc(sizeof(sigmaType))) )
 		errMsg("allocation", "newSigma", "sigma structure", 0);
-	if ( !(sigma->lambdaIdx = (intvec) arr_alloc(numIter, int)) )
+	if ( !(sigma->lambdaIdx = (intvec) arr_alloc(numIter*maxObs, int)) )
 		errMsg("allocation", "newSigma", "sigma->lambdaIdx", 0);
-	if ( !(sigma->vals = (pixbCType *) arr_alloc(numIter, pixbCType)) )
+	if ( !(sigma->vals = (pixbCType *) arr_alloc(numIter*maxObs, pixbCType)) )
 		errMsg("allocation", "newSigma", "sigma->vals", 0);
 	sigma->cnt = 0;
 

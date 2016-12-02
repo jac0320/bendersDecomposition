@@ -16,7 +16,7 @@
 #include "prob.h"
 
 #undef INPUT_CHECK
-#define MODIFY_CHECK
+#undef MODIFY_CHECK
 #undef ALGO_TRACE
 
 typedef struct{

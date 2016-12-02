@@ -52,15 +52,6 @@ int solveMaster(probType *prob, cellType *cell) {
 			cell->candidU[n] += cell->incumbU[n];
 		cell->candidU[0] = oneNorm(cell->candidU, prob->num->prevCols);
 
-#if 1
-		double val1, val2;
-		val1 = vXv(cell->master->objx-1, cell->candidU, NULL, prob->num->prevCols) +
-				getPrimalPoint(cell->master->lp, cell->master->macsz-1);
-		val2 = vXv(cell->master->objx-1, cell->incumbU, NULL, prob->num->prevCols) +
-						maxCutHeight(cell->cuts, cell->incumbU, prob->coord->colsC, prob->num->cntCcols);
-		printf("Candidate = %lf\tIncumbent = %lf\n", val1, val2);
-#endif
-
 		/* Switch back to primal/dual simplex solver */
  		changeSolverType(ALG_AUTOMATIC);
 
@@ -161,7 +152,7 @@ int changeQPrhs(LPptr lp, intvec betaCols, int betaLen, int numRows, sparseMatri
 
 	if ( !(qpRHS = (vector) arr_alloc(numRows+cuts->cnt+1, double)))
 			errMsg("allocation", "computeRHS", "indices", 0);
-	if ( !(indices = (intvec) arr_alloc(numRows, int)))
+	if ( !(indices = (intvec) arr_alloc(numRows+cuts->cnt, int)))
 		errMsg("allocation", "computeRHS", "indices", 0);
 
 	/* change the right-hand side to \bar{b}_t - D_t \hat{u}_t */
@@ -175,11 +166,13 @@ int changeQPrhs(LPptr lp, intvec betaCols, int betaLen, int numRows, sparseMatri
 	qpRHS = MSparsexvSub(Dbar, X, qpRHS);
 
 	/* changing cut right-hand side of stage subproblem */
-	for ( n = 0; n < cuts->cnt; n++ )
-		qpRHS[cuts->vals[n]->rowNum+1] = cuts->vals[n]->alpha - vXv(cuts->vals[n]->beta, X, betaCols, betaLen);
+	for ( n = 0; n < cuts->cnt; n++ ) {
+		qpRHS[cuts->vals[n]->rowNum+1] = cuts->vals[n]->alphaIncumb = cuts->vals[n]->alpha - vXv(cuts->vals[n]->beta, X, betaCols, betaLen);
+		indices[numRows+n] = cuts->vals[n]->rowNum;
+	}
 
 	/* change the right-hand side on the solver */
-	if ( changeRHS(lp, numRows, indices, qpRHS) )
+	if ( changeRHS(lp, numRows+cuts->cnt, indices, qpRHS+1) )
 		errMsg("solver", "chanegQPrhs", "failed to change QP right-hand side on solver", 0);
 
 	mem_free(indices); mem_free(qpRHS);
